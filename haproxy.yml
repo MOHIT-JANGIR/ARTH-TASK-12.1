@@ -1,0 +1,58 @@
+- hosts: web 
+  gather_facts: no
+  become: true
+  tasks:
+  - name: installing httpd software
+    package:
+      name: "httpd"
+      state: present
+
+  - name: installing php software
+    package:
+      name: "php"
+      state: present
+
+  - name: copying webpage
+    copy:
+      src: "code.php"
+      dest: "/var/www/html/index.php"
+    notify: cpweb
+  - service:
+      name: "firewalld"
+      state: stopped
+    register: firewalld
+  handlers:
+  - name: cpweb
+    service:
+      name: "httpd"
+      state: restarted
+
+
+- hosts: localhost
+  gather_facts: no
+  become: true
+  tasks:
+  - name: installing haproxy software
+    package:
+      name: "haproxy"
+      state: present
+
+  - name: copying haproxy files
+    template:
+      src: "haproxy.cfg.j2"
+      dest: "/etc/haproxy/haproxy.cfg"
+    notify: lbrestart
+  - service:
+      name: "firewalld"
+      state: stopped
+    register: firewalld
+
+  - name: firewall stopped successfully
+    debug:
+      var: firewalld.state
+
+  handlers:
+  - name: lbrestart
+    service:
+      name: "haproxy"
+      state: restarted
